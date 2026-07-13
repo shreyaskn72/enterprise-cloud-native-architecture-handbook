@@ -524,4 +524,4 @@ Key takeaways:
 
 ## What's Next?
 
-**Part 2 – Requirements & Capacity Planning** will transform these high-level goals into measurable engineering targets. We'll define expected traffic patterns, concurrency assumptions, database sizing, queue throughput, autoscaling limits, and the formulas needed to calculate API pods, worker pods, node counts, and database connection pools before deploying to production. This forms the quantitative foundation for all subsequent architectural decisions.
+**Part 2 – high level architecture will answer what does the system actually look like in deep.

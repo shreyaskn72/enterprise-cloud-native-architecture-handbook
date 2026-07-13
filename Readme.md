@@ -207,6 +207,8 @@ Celery
 Azure MySQL
 ```
 
+[part 2 - high level architecture](./handbook/part-02-high-level-architecture.md)
+
 ---
 
 # Part 3 – Component Deep Dive
