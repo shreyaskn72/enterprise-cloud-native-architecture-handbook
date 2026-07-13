@@ -38,28 +38,59 @@ The **Enterprise Cloud-Native Architecture Handbook** is a practical guide for d
 # 🏗 High-Level Architecture
 
 ```text
-                    Internet
-                        │
-               Azure Front Door
-                        │
-            Azure Application Gateway
-                        │
-              NGINX Ingress Controller
-                        │
-         ┌──────────────┴──────────────┐
-         │                             │
-   Flask API Pods (HPA)         Celery Beat
-         │                             │
-         └──────────────┬──────────────┘
-                        │
-              RabbitMQ (3-node Quorum)
-                        │
-              Celery Workers (KEDA)
-                        │
-             Azure MySQL Flexible Server
-          ┌─────────────┴─────────────┐
-          │                           │
-     Primary (Writes)          Read Replicas
+                        +----------------------+
+                        |      End Users       |
+                        +----------+-----------+
+                                   |
+                                   |
+                             HTTPS Requests
+                                   |
+                                   v
+                     +----------------------------+
+                     | Azure Front Door /         |
+                     | Application Gateway        |
+                     +-------------+--------------+
+                                   |
+                                   v
+                     +----------------------------+
+                     | NGINX Ingress Controller   |
+                     +-------------+--------------+
+                                   |
+                                   v
+                    +------------------------------+
+                    | Flask API (Stateless Pods)   |
+                    +------+-----------------------+
+                           |
+          +----------------+----------------+
+          |                                 |
+          | Synchronous                     | Asynchronous
+          v                                 v
++----------------------+          +----------------------+
+| Azure MySQL Primary  |          | RabbitMQ Cluster(3 node quorum) |
+| (Writes + Critical   |          | (Message Broker)     |
+| Reads)               |          +----------+-----------+
++----------+-----------+                     |
+           |                                 |
+           | Replication                     v
+           v                     +-------------------------+
++----------------------+         | Celery Worker Pods      |
+| Read Replicas        |         | (KEDA Autoscaled)       |
+| (Read-only Traffic)  |         +-----------+-------------+
++----------------------+                     |
+                                             |
+                                             v
+                                   +----------------------+
+                                   | Azure MySQL          |
+                                   | (Writes / Reads)     |
+                                   +----------------------+
+
+                    +-----------------------------+
+                    | Celery Beat (1 Replica)     |
+                    | Triggers Scheduled Tasks    |
+                    +-------------+---------------+
+                                  |
+                                  v
+                           RabbitMQ Cluster
 ```
 
 ---
@@ -593,29 +624,60 @@ Production-ready examples for:
 
 A complete production-ready Azure deployment, tying everything together:
 
-```
-                    Internet
-                        │
-               Azure Front Door
-                        │
-            Azure Application Gateway
-                        │
-              NGINX Ingress Controller
-                        │
-         ┌──────────────┴──────────────┐
-         │                             │
-   Flask API Pods (HPA)         Celery Beat
-         │                             │
-         └──────────────┬──────────────┘
-                        │
-              RabbitMQ (3-node Quorum)
-                        │
-              Celery Workers (KEDA)
-                        │
-             Azure MySQL Flexible Server
-          ┌─────────────┴─────────────┐
-          │                           │
-     Primary (Writes)          Read Replicas
+```text
+                        +----------------------+
+                        |      End Users       |
+                        +----------+-----------+
+                                   |
+                                   |
+                             HTTPS Requests
+                                   |
+                                   v
+                     +----------------------------+
+                     | Azure Front Door /         |
+                     | Application Gateway        |
+                     +-------------+--------------+
+                                   |
+                                   v
+                     +----------------------------+
+                     | NGINX Ingress Controller   |
+                     +-------------+--------------+
+                                   |
+                                   v
+                    +------------------------------+
+                    | Flask API (Stateless Pods)   |
+                    +------+-----------------------+
+                           |
+          +----------------+----------------+
+          |                                 |
+          | Synchronous                     | Asynchronous
+          v                                 v
++----------------------+          +----------------------+
+| Azure MySQL Primary  |          | RabbitMQ Cluster(3 node quorum) |
+| (Writes + Critical   |          | (Message Broker)     |
+| Reads)               |          +----------+-----------+
++----------+-----------+                     |
+           |                                 |
+           | Replication                     v
+           v                     +-------------------------+
++----------------------+         | Celery Worker Pods      |
+| Read Replicas        |         | (KEDA Autoscaled)       |
+| (Read-only Traffic)  |         +-----------+-------------+
++----------------------+                     |
+                                             |
+                                             v
+                                   +----------------------+
+                                   | Azure MySQL          |
+                                   | (Writes / Reads)     |
+                                   +----------------------+
+
+                    +-----------------------------+
+                    | Celery Beat (1 Replica)     |
+                    | Triggers Scheduled Tasks    |
+                    +-------------+---------------+
+                                  |
+                                  v
+                           RabbitMQ Cluster
 ```
 
 ---
