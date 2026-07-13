@@ -14,14 +14,16 @@ The **Enterprise Cloud-Native Architecture Handbook** is a practical guide for d
 | Component | Production Design |
 |-----------|-------------------|
 | 🌐 API | Flask + Gunicorn |
-| 📈 API Scaling | HPA + Cluster Autoscaler |
+| 📈 **API Autoscaling** | Horizontal Pod Autoscaler (HPA) + Cluster Autoscaler |
 | 📨 Message Broker | RabbitMQ (3-Node Quorum Cluster) |
 | ⚙️ Background Jobs | Celery Workers |
 | 📊 Worker Scaling | KEDA (RabbitMQ Queue Length) |
 | ⏰ Scheduler | Celery Beat (Single Replica) |
 | 🗄️ Database | Azure MySQL Flexible Server |
-| ✍️ Writes | Primary Database |
-| 📖 Reads | Multiple Read Replicas |
+| ✍️ **Write Strategy** | Single Primary Database |
+| 📖 **Read Strategy** | Multiple Read Replicas *(10 in reference architecture)* |
+| 🔌 **Connection Management** | Connection Pooling with Max Connection Budgeting |
+| 💾 **Backup & Recovery** | Automated Backups + Point-in-Time Restore (PITR) |
 | 🚢 Platform | Azure Kubernetes Service (AKS) |
 | 📡 Monitoring | Prometheus + Grafana + Loki |
 | 🔍 Tracing | OpenTelemetry |
@@ -74,12 +76,16 @@ The **Enterprise Cloud-Native Architecture Handbook** is a practical guide for d
 | 🚀 **API Layer** | Stateless Flask API running on Kubernetes Deployments |
 | 📈 **API Autoscaling** | Horizontal Pod Autoscaler (HPA) + Cluster Autoscaler |
 | 📨 **Message Broker** | RabbitMQ 3-Node Quorum Cluster |
-| ⚙️ **Background Processing** | Celery Workers |
+| ⚙️ **Background Processing** | Celery Workers processing asynchronous tasks |
 | 📊 **Worker Autoscaling** | KEDA based on RabbitMQ Queue Length |
 | ⏰ **Task Scheduling** | Single Celery Beat Replica |
 | 🗄️ **Database** | Azure Database for MySQL Flexible Server |
-| ✍️ **Write Strategy** | Single Primary Database |
-| 📖 **Read Strategy** | Multiple Read Replicas |
+|✍️ **Write Architecture** | Single Primary Database |
+| 📖 **Read Architecture** | Multiple Read Replicas for read-intensive workloads |
+| 🔌 **Connection Management** | Application-level Connection Pooling with Capacity Planning |
+| 📐 **Connection Capacity** | Database connections budgeted based on pod count, worker count, and pool size |
+| 💾 **Backup Strategy** | Automated Backups with Point-in-Time Restore (PITR) |
+| 🔄 **High Availability** | Zone-redundant deployment with automatic failover *(where supported)* |
 | 🔐 **Secrets Management** | Azure Key Vault + Kubernetes Secrets |
 | 📡 **Monitoring & Observability** | Prometheus + Grafana + Loki + OpenTelemetry |
 | 🛡️ **Security** | RBAC + Network Policies + TLS + Pod Security |
@@ -107,6 +113,19 @@ The **Enterprise Cloud-Native Architecture Handbook** is a practical guide for d
 ---
 
 Although Azure is used for implementation examples, the architectural principles are applicable across cloud providers.
+
+# 🎯 Design Goals
+
+| Goal | Approach |
+|------|----------|
+| 🚀 Scalability | Horizontal scaling using HPA, KEDA, and Cluster Autoscaler |
+| 🛡️ High Availability | Multi-node RabbitMQ, Read Replicas, AKS self-healing |
+| ⚡ Performance | Connection pooling, read/write separation, asynchronous processing |
+| 💰 Cost Optimization | Event-driven autoscaling and managed Azure services |
+| 🔒 Security | RBAC, TLS, Azure Key Vault, Network Policies |
+| 📊 Observability | Metrics, Logs, Traces, Dashboards, Alerts |
+| 🔄 Reliability | Automated backups, PITR, health probes, rolling deployments |
+| 🏗️ Maintainability | Stateless services, Infrastructure as Code, modular architecture |
 
 # 📚 Handbook Contents
 
