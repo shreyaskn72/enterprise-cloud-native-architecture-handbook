@@ -1,8 +1,5 @@
-Excellent. Let's build this as a real architecture handbook. I'll write it in the style of an architecture design document (ADD) used in enterprise software organizations.
 
----
-
-# Enterprise Cloud-Native Architecture Handbook
+# Part 1 – System Overview
 
 ## Designing Highly Scalable Python Microservices on Azure Kubernetes Service
 

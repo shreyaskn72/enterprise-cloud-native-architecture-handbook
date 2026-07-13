@@ -171,6 +171,7 @@ Although Azure is used for implementation examples, the architectural principles
 * Cost Goals
 * Architecture Principles
 
+[part 1 - system overview](./handbook/part-01-system-overview.md)
 ---
 
 # Part 2 – High Level Architecture
