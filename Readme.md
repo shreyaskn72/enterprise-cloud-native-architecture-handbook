@@ -179,563 +179,389 @@ Azure MySQL
 
 # Part 3 – Component Deep Dive
 
-Every component explained.
-
-Example
+Every component explained with detailed guidance on architecture, configuration, and operational considerations.
 
 ## Flask API
-
-Responsibilities
-
-Scaling
-
-Resource limits
-
-Health checks
-
-Connection pooling
-
-Failure handling
-
-Security
-
-Metrics
-
----
+- Responsibilities and request handling
+- Horizontal and vertical scaling strategies
+- Resource limits and requests
+- Liveness, readiness, and startup probes
+- Connection pooling configuration
+- Failure handling and recovery
+- Security best practices
+- Metrics and instrumentation
 
 ## RabbitMQ
-
-Exchange
-
-Queues
-
-Bindings
-
-Publisher
-
-Consumer
-
-Dead Letter Queue
-
-Retry Queue
-
-Quorum Queue
-
-Persistence
-
-Cluster
-
----
+- Exchange types and routing
+- Queue design and management
+- Binding configuration
+- Publisher patterns and guarantees
+- Consumer strategies
+- Dead Letter Queue (DLQ) handling
+- Retry Queue implementation
+- Quorum Queue consensus
+- Persistence and durability
+- Cluster architecture and quorum
 
 ## Celery
-
-Worker lifecycle
-
-Autoscaling
-
-Task acknowledgement
-
-Retries
-
-Idempotency
-
-Scheduling
-
-Beat
-
-Concurrency
-
-Prefetch
-
-Memory leaks
-
----
+- Worker lifecycle and states
+- Horizontal autoscaling
+- Task acknowledgement modes
+- Retry logic and exponential backoff
+- Idempotency implementation
+- Task scheduling strategies
+- Celery Beat configuration
+- Concurrency models
+- Prefetch limits and tuning
+- Memory leaks detection and prevention
 
 ## Azure MySQL
-
-Primary
-
-Replica
-
-Read routing
-
-Replication lag
-
-Connection pool
-
-Backups
-
-Failover
-
-Partitioning
-
-Indexes
+- Primary-replica architecture
+- Read replica routing and failover
+- Replication lag monitoring
+- Connection pool management
+- Backup strategies and retention
+- Failover mechanisms
+- Data partitioning strategies
+- Index design and optimization
 
 ---
 
 # Part 4 – Kubernetes Architecture
 
-Detailed diagrams
+Detailed diagrams and resource configurations for AKS deployment:
 
 ```
 AKS
-
-├── System Node Pool
-
-├── API Node Pool
-
-├── Worker Node Pool
-
-├── Messaging Node Pool
+├── System Node Pool (control plane & monitoring)
+├── API Node Pool (stateless Flask services)
+├── Worker Node Pool (Celery workers)
+└── Messaging Node Pool (RabbitMQ)
 ```
 
-Pods
+Core Resources:
+- Pods and Pod specifications
+- Deployments with rolling updates
+- Services (ClusterIP, LoadBalancer)
+- Ingress controllers and routing
+- ConfigMaps for configuration
+- Secrets for sensitive data
 
-Deployments
-
-Services
-
-Ingress
-
-ConfigMaps
-
-Secrets
-
-PVC
-
-StorageClass
-
-PDB
-
-HPA
-
-KEDA
+Storage & Scheduling:
+- PersistentVolumeClaims (PVC)
+- StorageClass provisioning
+- PodDisruptionBudgets (PDB)
+- HorizontalPodAutoscaler (HPA)
+- KEDA for event-driven scaling
 
 ---
 
 # Part 5 – Autoscaling
 
-One complete chapter.
+Comprehensive guide to elastic scaling strategies:
 
-Includes
+Scaling Controllers:
+- HorizontalPodAutoscaler (HPA) based on CPU/memory metrics
+- KEDA for queue-based and custom metrics
+- Cluster Autoscaler for node provisioning
+- Vertical Pod Autoscaler (VPA) for resource recommendations
 
-HPA
-
-KEDA
-
-Cluster Autoscaler
-
-VPA
-
-Scaling policies
-
-Cooldown
-
-Stabilization
-
-Examples
+Scaling Policies:
+- Cooldown periods and stabilization windows
+- Scale-up and scale-down behaviors
+- Metric aggregation strategies
+- Example configurations with trade-offs
 
 ---
 
 # Part 6 – Capacity Planning
 
-Professional formulas.
-
-Example
+Mathematical formulas and methodologies for sizing infrastructure:
 
 ## API Capacity
-
 ```
-Pods Required
-
-=
-
-Peak RPS
-
-/
-
-RPS per Pod
+Pods Required = Peak RPS / RPS per Pod
 ```
-
----
 
 ## Worker Capacity
-
 ```
-Workers
-
-=
-
-Incoming Jobs/sec
-
-/
-
-Jobs processed/sec
+Workers = Incoming Jobs/sec / Jobs processed/sec
 ```
-
----
 
 ## Database Connections
-
 ```
-Connections
-
-=
-
-(API Pods × Pool)
-
-+
-
-(Workers × Pool)
-
-+
-
-Admin
-
-+
-
-Monitoring
+Total Connections = (API Pods × Pool Size) + (Workers × Pool Size) + Admin + Monitoring
 ```
-
----
 
 ## RabbitMQ Throughput
-
 ```
-Consumers
-
-=
-
-Messages/sec
-
-/
-
-Worker Throughput
+Consumer Count = Messages/sec / Worker Throughput
 ```
-
----
 
 ## AKS Nodes
-
 ```
-Nodes
-
-=
-
-Pods
-
-/
-
-Pods per Node
+Nodes Required = Pods / Pods per Node
 ```
 
 ---
 
 # Part 7 – Database Design
 
-Read replicas
+Advanced database architecture and optimization:
 
-Replication lag
+Read Scaling:
+- Read replica strategies and failover
+- Replication lag monitoring and handling
+- Consistency models (eventual, strong)
 
-Consistency
+Query Optimization:
+- Transaction design patterns
+- Index strategies and tuning
+- Slow query identification and remediation
+- Connection pool management
 
-Transactions
-
-Indexes
-
-Connection pools
-
-Slow queries
-
-Sharding (future)
-
-Partitioning
-
-Caching
+Data Management:
+- Partitioning strategies
+- Sharding design (future roadmap)
+- Caching layers and cache invalidation
 
 ---
 
 # Part 8 – Queue Architecture
 
-Professional diagrams
+Message flow architecture and patterns:
 
 ```
-Producer
-
-↓
-
-RabbitMQ Exchange
-
-↓
-
-Queue
-
-↓
-
-Celery Workers
-
-↓
-
-Retry Queue
-
-↓
-
-Dead Letter Queue
+Producer → RabbitMQ Exchange → Queue → Celery Workers
+                                          ↓
+                                    [Success/Retry]
+                                    Retry Queue ↓
+                                    Dead Letter Queue
 ```
+
+Topics covered:
+- Exchange types and message routing
+- Queue design for throughput
+- Dead Letter Queue (DLQ) strategies
+- Retry mechanisms with backoff
 
 ---
 
 # Part 9 – Failure Scenarios
 
-Examples
+Comprehensive failure mode analysis with recovery procedures:
 
-API Pod crashes
+**API Pod Crash**
+- Kubernetes detects failure → Container restart → Health probe validation
 
-↓
+**RabbitMQ Node Failure**
+- Quorum detection → Leader election → Message recovery
 
-Kubernetes restarts
+**Primary Database Failure**
+- Health check detection → Automatic failover → Read replica promotion
 
----
+**AKS Node Failure**
+- Node taint detection → Pod eviction → Rescheduling to healthy node
 
-RabbitMQ node fails
-
-↓
-
-Quorum elects leader
-
----
-
-Primary DB fails
-
-↓
-
-Automatic failover
+Each scenario includes detailed recovery flows and mitigation strategies.
 
 ---
 
-AKS node fails
+# Part 10 – Monitoring & Observability
 
-↓
+Complete observability stack:
 
-Pods rescheduled
+Monitoring Tools:
+- Prometheus for metrics collection
+- Grafana for dashboards and visualization
+- Loki for log aggregation
+- Azure Monitor for cloud-native monitoring
+- OpenTelemetry for distributed tracing
 
-Every failure scenario includes recovery flow.
+Metrics & Alerting:
+- Custom dashboards for key components
+- Metric collection and aggregation
+- Alert configuration and notification routing
 
----
-
-# Part 10 – Monitoring
-
-Prometheus
-
-Grafana
-
-Loki
-
-Azure Monitor
-
-OpenTelemetry
-
-Dashboards
-
-Metrics
-
-Alerts
-
-SLO
-
-SLI
-
-Error Budget
-
-Golden Signals
-
-RED
-
-USE
+SLO Framework:
+- Service Level Objectives (SLO) definition
+- Service Level Indicators (SLI) tracking
+- Error budget calculation and management
+- Golden Signals (latency, traffic, errors, saturation)
+- RED methodology (Rate, Errors, Duration)
+- USE methodology (Utilization, Saturation, Errors)
 
 ---
 
 # Part 11 – Security
 
-Identity
+Defense-in-depth security architecture:
 
-Secrets
+Access Control:
+- Identity and authentication
+- Azure RBAC (Role-Based Access Control)
+- Kubernetes RBAC configuration
+- Pod Security Policies and Standards
 
-Azure Key Vault
+Secrets Management:
+- Azure Key Vault integration
+- Kubernetes Secrets encryption
+- Secret rotation strategies
+- Pod-to-pod authentication
 
-TLS
+Network Security:
+- TLS/SSL termination
+- Ingress security configuration
+- Network Policies for pod communication
+- Egress rules and firewall
 
-Ingress
-
-Network Policy
-
-RBAC
-
-Pod Security
-
-Image Scanning
-
-Supply Chain Security
+Container Security:
+- Container image scanning
+- Registry security
+- Supply chain security practices
 
 ---
 
 # Part 12 – Disaster Recovery
 
-Backup
+Business continuity and disaster recovery strategies:
 
-Restore
+Backup & Recovery:
+- Automated backup scheduling
+- Point-in-time restore (PITR) capabilities
+- Restore testing and validation
+- Backup retention policies
 
-Cross-region
+RTO/RPO Planning:
+- Recovery Time Objective (RTO) targets
+- Recovery Point Objective (RPO) targets
+- Failover procedures and runbooks
 
-RTO
-
-RPO
-
-Failover
-
-Backup testing
+Cross-Region Strategy:
+- Multi-region deployment options
+- Cross-region replication
+- Failover automation and testing
 
 ---
 
 # Part 13 – Performance Tuning
 
-Gunicorn
+Optimization strategies for each component:
 
-Celery
+Application Layer:
+- Gunicorn workers and threading configuration
+- Celery concurrency and prefetch tuning
+- Connection pool optimization
 
-RabbitMQ
+Infrastructure Layer:
+- RabbitMQ throughput and memory tuning
+- MySQL query optimization and buffer pools
+- Linux kernel tuning (file descriptors, TCP)
+- AKS node configuration
 
-MySQL
-
-Linux
-
-AKS
-
-Networking
-
-Storage
-
-CPU
-
-Memory
+System Resources:
+- CPU allocation and requests
+- Memory management and limits
+- Networking bandwidth and latency
+- Storage I/O optimization
 
 ---
 
 # Part 14 – Cost Optimization
 
-AKS
+Strategies for reducing infrastructure costs:
 
-Node Pools
+Compute Optimization:
+- AKS pricing models and options
+- Node Pool cost allocation
+- Spot instances and preemptible nodes
+- Right-sizing recommendations
 
-Spot Nodes
+Storage & Database:
+- Read replica cost analysis
+- Storage tier selection
+- Backup retention optimization
 
-Read Replicas
-
-Autoscaling
-
-RabbitMQ sizing
-
-Storage
-
-Ingress
-
-Monitoring
+Dynamic Resource Management:
+- Autoscaling efficiency
+- Resource request optimization
+- Monitoring and observability costs
+- Ingress and networking expenses
 
 ---
 
 # Part 15 – Production Checklist
 
-Over **200+ checklist items**
+**200+ comprehensive checklist items** organized by category:
 
-Examples
+Pod & Container Management:
+- ✅ Liveness Probe configuration
+- ✅ Readiness Probe configuration
+- ✅ Startup Probe configuration
+- ✅ Resource Limits and Requests
 
-✅ Liveness Probe
+High Availability:
+- ✅ PodDisruptionBudgets (PDB)
+- ✅ Pod anti-affinity rules
+- ✅ Multi-zone deployment
 
-✅ Readiness Probe
+Autoscaling & Reliability:
+- ✅ HorizontalPodAutoscaler (HPA)
+- ✅ KEDA configuration
+- ✅ Cluster Autoscaler
 
-✅ Startup Probe
+Data & Disaster Recovery:
+- ✅ Automated Backups
+- ✅ Backup testing procedures
+- ✅ Restore procedures
 
-✅ PDB
-
-✅ Anti-affinity
-
-✅ Resource Limits
-
-✅ Resource Requests
-
-✅ HPA
-
-✅ KEDA
-
-✅ Autoscaler
-
-✅ Backups
-
-✅ Monitoring
-
-✅ Alerts
-
-✅ Logging
-
-...
+Observability:
+- ✅ Monitoring dashboards
+- ✅ Alert configuration
+- ✅ Logging and log retention
 
 ---
 
 # Part 16 – Load Testing
 
-Using
+Performance validation and stress testing methodologies:
 
-Locust
+Testing Tools:
+- Locust (Python-based distributed testing)
+- k6 (modern performance testing)
+- Apache JMeter (enterprise load testing)
 
-k6
+Key Metrics:
+- Throughput (requests per second)
+- Latency (response times)
+- P99 percentile analysis
+- CPU and memory utilization
 
-JMeter
-
-Metrics
-
-Throughput
-
-Latency
-
-P99
-
-CPU
-
-Memory
-
-Autoscaling validation
-
-Connection exhaustion testing
+Test Scenarios:
+- Autoscaling validation and behavior
+- Connection pool exhaustion testing
+- Database connection limits
+- Message queue saturation testing
 
 ---
 
 # Part 17 – Troubleshooting Guide
 
-Examples
+Decision-tree style troubleshooting for common production issues:
 
-High API latency
+**High API Latency**
+```
+Check API Pod CPU → Check Database Response Time → 
+Check Message Queue Depth → Check HPA Status → 
+Check Node Resources → Check Network Latency
+```
 
-↓
-
-Check CPU
-
-↓
-
-Check DB
-
-↓
-
-Check Queue
-
-↓
-
-Check HPA
-
-↓
-
-Check Nodes
-
-Decision-tree style troubleshooting for common production issues.
+Covers:
+- Performance degradation diagnosis
+- Resource bottleneck identification
+- Queue backlog analysis
+- Scaling inefficiency troubleshooting
+- Node capacity issues
 
 ---
 
@@ -792,28 +618,6 @@ A complete production-ready Azure deployment, tying everything together:
      Primary (Writes)          Read Replicas
 ```
 
----
-
-# 🛠 Technology Stack
-
-| Category | Technologies | Purpose |
-|-----------|--------------|---------|
-| ☁️ **Cloud** | Microsoft Azure | Cloud Infrastructure |
-| 🚢 **Container Platform** | Kubernetes, Azure Kubernetes Service (AKS) | Container Orchestration |
-| 🐳 **Containerization** | Docker | Application Packaging |
-| 💻 **Backend Framework** | Python, Flask, Gunicorn | REST API Development |
-| 📨 **Messaging** | RabbitMQ | Asynchronous Messaging |
-| ⚙️ **Background Jobs** | Celery, Celery Beat | Task Processing & Scheduling |
-| 🗄️ **Database** | Azure Database for MySQL Flexible Server | Relational Database |
-| 📈 **Autoscaling** | HPA, KEDA, Cluster Autoscaler | Elastic Scaling |
-| 📊 **Monitoring** | Prometheus, Grafana, Loki | Metrics, Dashboards & Logs |
-| 🔍 **Observability** | OpenTelemetry | Distributed Tracing |
-| 🔐 **Security** | Azure Key Vault, Kubernetes RBAC, Network Policies | Secrets & Access Control |
-| 📦 **Package Management** | Helm | Kubernetes Deployments |
-| 🏗️ **Infrastructure as Code** | Crossplane *(planned)*, Terraform *(planned)* | Infrastructure Automation |
-| 🧪 **Load Testing** | Locust, k6, Apache JMeter | Performance Validation |
-| 🔄 **CI/CD** | GitHub Actions *(planned)* | Continuous Integration & Deployment |
----
 ---
 # 🎯 Objectives
 
