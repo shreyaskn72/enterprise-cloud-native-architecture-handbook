@@ -619,6 +619,75 @@ A complete production-ready Azure deployment, tying everything together:
 ```
 
 ---
+
+
+
+# 🎓 ADVANCED PATTERNS (Optional Reading)
+
+> **For architects and senior engineers designing ultra-reliable, high-scale systems.**  
+> Start here if building financial systems, payment platforms, or mission-critical applications.
+
+---
+
+# Part 20 – Advanced Resilience Patterns
+
+Advanced techniques for fault tolerance and graceful degradation.
+
+* **Circuit Breakers & Bulkheads**
+  * Fault isolation and cascading failure prevention
+  * State machine pattern (CLOSED → OPEN → HALF_OPEN)
+  * Thread pool isolation per dependency
+  * Configuration: fail threshold, timeout, success threshold
+
+* **Distributed Transactions (Saga Pattern)**
+  * Choreography pattern (event-driven, decentralized)
+  * Orchestration pattern (coordinator-based)
+  * Outbox pattern for guaranteed message delivery
+  * Compensation transactions and rollback strategies
+
+* **Cache Coherency Strategies**
+  * Multi-layer cache architecture (L1-L4)
+  * Write-through and cache-aside patterns
+  * Strong vs eventual consistency models
+  * Replication lag monitoring and handling
+  * Event-based cache invalidation
+
+---
+
+# Part 21 – Advanced Scaling Patterns
+
+Enterprise-grade patterns for scaling and processing.
+
+* **Event Sourcing & CQRS**
+  * Append-only event store vs traditional CRUD
+  * Command Query Responsibility Segregation
+  * Separate write and read models
+  * Use cases: audit trails, temporal queries, financial systems
+
+* **Rate Limiting at Scale**
+  * Multi-layer rate limiting (CDN, Gateway, App, Message broker)
+  * Token bucket algorithm
+  * Adaptive rate limiting based on system load
+  * Per-user, per-tier, per-endpoint limits
+
+* **High-Availability Celery Beat**
+  * Distributed locking with Redlock pattern
+  * Multi-replica deployment with automatic failover
+  * Pod Disruption Budget configuration
+  * Monitoring and health checks
+
+---
+
+# Part 22 – Deployment & Operational Patterns (Planned)
+
+* Blue-green deployments
+* Canary releases
+* Feature flags & gradual rollouts
+* Traffic shadowing
+* Automated backup and disaster recovery
+
+
+---
 # 🎯 Objectives
 
 This handbook aims to help engineers:
