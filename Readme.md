@@ -259,6 +259,7 @@ Every component explained with detailed guidance on architecture, configuration,
 - Data partitioning strategies
 - Index design and optimization
 
+[part 3 - component deep dive](./handbook/part-03-component-deep-dive.md)
 ---
 
 # Part 4 – Kubernetes Architecture
@@ -288,6 +289,8 @@ Storage & Scheduling:
 - HorizontalPodAutoscaler (HPA)
 - KEDA for event-driven scaling
 
+[part 4 - kubernetes architecture](./handbook/part-04-kubernetes-architecture.md)
+
 ---
 
 # Part 5 – Autoscaling
@@ -305,7 +308,7 @@ Scaling Policies:
 - Scale-up and scale-down behaviors
 - Metric aggregation strategies
 - Example configurations with trade-offs
-
+[part 5 - autoscaling](./handbook/part-05-autoscaling.md)
 ---
 
 # Part 6 – Capacity Planning
