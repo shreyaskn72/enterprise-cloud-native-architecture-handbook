@@ -649,6 +649,15 @@ AKS Nodes (Cluster Autoscaler)
 
 The database often defines the practical upper limit for the entire system. By calculating connection budgets first and then deriving HPA and KEDA limits from that budget, the platform can scale predictably without exhausting shared resources.
 
+| Layer          | Primary Metric | Planning Formula               |
+| -------------- | -------------- | ------------------------------ |
+| Flask API      | Requests/sec   | RPS ÷ RPS per Pod              |
+| Celery Workers | Jobs/sec       | Jobs ÷ Worker Throughput       |
+| RabbitMQ       | Messages/sec   | Messages ÷ Consumer Throughput |
+| MySQL          | Connections    | Pods × Pool Size               |
+| AKS            | Pod Density    | Pods ÷ Pods per Node           |
+
+
 ---
 
 # Next Chapter
