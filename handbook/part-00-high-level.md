@@ -39,7 +39,20 @@ KEDA:  Workers Needed = Queue Length / Messages per Worker
 ```
 Targets: CPU 70%, Memory 75%. Stabilization/cooldown: 300s (prevents flapping).
 
-## 4. Capacity Planning — size everything with math, not guesses
+## 04 – Kubernetes Architecture
+Different workloads get different node pools so a noisy neighbor (e.g. RabbitMQ under load) can't starve the API of resources.
+```
+AKS
+├── System Node Pool   → control plane & monitoring
+├── API Node Pool      → stateless Flask pods
+├── Worker Node Pool   → Celery workers
+└── Messaging Node Pool→ RabbitMQ
+```
+**Core resources**: Pods, Deployments (rolling updates), Services (ClusterIP/LoadBalancer), Ingress, ConfigMaps, Secrets
+**Storage & scheduling**: PVC, StorageClass, PodDisruptionBudget (PDB), HPA, KEDA
+
+
+## 5. Capacity Planning — size everything with math, not guesses
 Before you set any autoscaling limit, calculate how much you actually need — these five formulas cover every layer of the stack.
 ```
 API Capacity:        Pods Required = Peak RPS / RPS per Pod
@@ -49,14 +62,35 @@ RabbitMQ Throughput: Consumer Count = Messages/sec / Worker Throughput
 AKS Nodes:           Nodes Required = Pods / Pods per Node
 ```
 
-## 5. The database is the real ceiling
+## Part 5 – Database Design
+Beyond just "primary + replicas," this chapter covers how to keep reads fast and consistent as the DB grows.
+
+| Area | Topics |
+|---|---|
+| Read Scaling | Replica routing/failover, replication lag monitoring, consistency models (eventual/strong) |
+| Query Optimization | Transaction design, index tuning, slow query remediation, connection pool mgmt |
+| Data Management | Partitioning, sharding (future roadmap), caching layers + invalidation |
+
+
+## 6. The database is the real ceiling
 No matter how many pods you spin up, the database's max connection limit is the hard stop — always size autoscaling limits from this, not arbitrary numbers.
 ```
 (API Pods × Pool Size) + (Worker Pods × Pool Size) + Reserved ≤ DB Max Connections
 ```
 Min/Max example: Flask 5–60 · Workers 2–125 · Nodes 3–12
 
-## 6. Failure & Recovery
+## 7 – Queue Architecture
+When a job fails, it shouldn't just vanish — retries and a dead letter queue (DLQ) exist to catch failures without losing work.
+```
+Producer → RabbitMQ Exchange → Queue → Celery Workers
+                                          ↓
+                                    [Success/Retry]
+                                    Retry Queue ↓
+                                    Dead Letter Queue
+```
+Topics: exchange types/routing, queue design for throughput, DLQ strategies, retry with backoff
+
+## 8. Failure & Recovery
 Kubernetes and Azure MySQL are both designed to self-heal — the pattern is always: **detect → isolate → recover**.
 
 | Failure | Recovery |
@@ -67,6 +101,8 @@ Kubernetes and Azure MySQL are both designed to self-heal — the pattern is alw
 | AKS node down | Pods evicted → rescheduled elsewhere |
 
 **RTO** = how long you can be down. **RPO** = how much data you can afford to lose. **PITR** = restore DB to any exact past moment.
+
+
 
 ## 7. Observability — 3 pillars
 Metrics tell you *something's wrong*, logs tell you *what happened*, traces tell you *where the time went*.
