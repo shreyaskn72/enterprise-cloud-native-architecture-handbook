@@ -29,41 +29,16 @@ Failure Buffer
 A common planning formula is:
 
 ```text
-Required Capacity
-
-=
-
-Peak Capacity × Growth Factor × Failure Factor
+Required Capacity = Peak Capacity × Growth Factor × Failure Factor
 ```
 
-Example
-
-Current Peak
-
+**Example**
 ```text
-5,000 Requests/sec
-```
+Current Peak     = 5,000 Requests/sec
+Expected Growth   = 2x
+Failure Buffer    = 20%
 
-Expected Growth
-
-```text
-2x
-```
-
-Failure Buffer
-
-```text
-20%
-```
-
-Required Capacity
-
-```text
-5000 × 2 × 1.2
-
-=
-
-12,000 Requests/sec
+Required Capacity = 5000 × 2 × 1.2 = 12,000 Requests/sec
 ```
 
 ---
@@ -109,51 +84,18 @@ Implications:
 # 6.4 API Capacity Planning
 
 ## Formula
-
 ```text
-Required API Pods
-
-=
-
-Peak Requests/sec
-
-/
-
-Requests handled per Pod
+Required API Pods = Peak Requests/sec / Requests handled per Pod
 ```
 
 ### Example
-
-Peak traffic:
-
 ```text
-6,000 Requests/sec
-```
+Peak traffic              = 6,000 Requests/sec
+Capacity per Flask pod    = 120 Requests/sec
 
-Each Flask pod can safely process:
+6000 / 120 = 50 Pods
 
-```text
-120 Requests/sec
-```
-
-Calculation:
-
-```text
-6000 / 120
-
-=
-
-50 Pods
-```
-
-Add a 20% safety margin:
-
-```text
-50 × 1.2
-
-=
-
-60 Pods
+Safety margin (20%):  50 × 1.2 = 60 Pods
 ```
 
 **Recommendation:**
@@ -178,29 +120,9 @@ Recommended HPA configuration:
 | Max Replicas | 60     |
 
 Scaling flow:
-
 ```text
-Incoming Traffic
-
-↓
-
-CPU > 70%
-
-↓
-
-HPA
-
-↓
-
-More Flask Pods
-
-↓
-
-Cluster Autoscaler (if needed)
-
-↓
-
-Additional AKS Nodes
+Incoming Traffic → CPU > 70% → HPA → More Flask Pods
+→ Cluster Autoscaler (if needed) → Additional AKS Nodes
 ```
 
 ---
@@ -208,51 +130,18 @@ Additional AKS Nodes
 # 6.6 Background Worker Capacity
 
 ## Formula
-
 ```text
-Workers Required
-
-=
-
-Incoming Jobs/sec
-
-/
-
-Jobs processed/sec by one Worker
+Workers Required = Incoming Jobs/sec / Jobs processed/sec by one Worker
 ```
 
-Example
-
-Incoming jobs:
-
+### Example
 ```text
-2,500 Jobs/sec
-```
+Incoming jobs                 = 2,500 Jobs/sec
+Jobs processed per Worker     = 25 Jobs/sec
 
-Each worker processes:
+2500 / 25 = 100 Workers
 
-```text
-25 Jobs/sec
-```
-
-Calculation:
-
-```text
-2500 / 25
-
-=
-
-100 Workers
-```
-
-Add safety margin:
-
-```text
-100 × 1.25
-
-=
-
-125 Workers
+Safety margin (25%):  100 × 1.25 = 125 Workers
 ```
 
 Recommended KEDA limits:
@@ -268,58 +157,21 @@ Recommended KEDA limits:
 
 Queues should absorb temporary spikes.
 
-Example:
-
-Traffic spike:
-
 ```text
-10,000 Jobs
-
-↓
-
-RabbitMQ Queue
-
-↓
-
-Workers process gradually
+Traffic spike (10,000 Jobs) → RabbitMQ Queue → Workers process gradually
 ```
 
 Queue depth formula:
-
 ```text
-Maximum Queue
-
-=
-
-Maximum Processing Delay
-
-×
-
-Incoming Jobs/sec
+Maximum Queue = Maximum Processing Delay × Incoming Jobs/sec
 ```
 
-Example:
-
-Maximum acceptable delay:
-
+### Example
 ```text
-30 seconds
-```
+Maximum acceptable delay   = 30 seconds
+Incoming jobs              = 2,000/sec
 
-Incoming jobs:
-
-```text
-2,000/sec
-```
-
-Queue size:
-
-```text
-30 × 2000
-
-=
-
-60,000 messages
+Queue size = 30 × 2000 = 60,000 messages
 ```
 
 This becomes an operational threshold for alerts.
@@ -328,22 +180,12 @@ This becomes an operational threshold for alerts.
 
 # 6.8 Database Capacity Planning
 
-The database is usually the first bottleneck in a scalable architecture.
-
-Everything else must be designed around it.
-
----
+The database is usually the first bottleneck in a scalable architecture. Everything else must be designed around it.
 
 ## Step 1 — Maximum Database Connections
 
-Assume Azure MySQL supports:
-
 ```text
-Max Connections
-
-=
-
-1,200
+Max Connections = 1,200
 ```
 
 Reserve:
@@ -353,158 +195,65 @@ Reserve:
 | DBA/Admin            | 40          |
 | Monitoring           | 30          |
 | Backup & Maintenance | 30          |
-
-Reserved:
-
-```text
-100
-```
-
-Application budget:
+| **Reserved Total**   | **100**     |
 
 ```text
-1200 - 100
-
-=
-
-1100 Connections
+Application budget = 1200 - 100 = 1,100 Connections
 ```
-
----
 
 ## Step 2 — API Pool
 
-Suppose:
-
-Maximum API Pods
-
 ```text
-60
+Maximum API Pods = 60
+Pool size per pod = 10
+
+Connections = Pods × Pool Size = 60 × 10 = 600 Connections
 ```
 
-Pool size:
+## Step 3 — Celery Pool *(corrected)*
 
+Section 6.6 sets the KEDA maximum at **125 workers**, not 100 — the connection budget must be calculated against that actual configured maximum, or a real scale-out event will exceed the database's connection budget.
+
+Remaining budget after API pool: `1,100 - 600 = 500 connections`.
+
+To stay within budget at the full 125-worker maximum, the per-worker pool size must be reduced:
 ```text
-10
+Maximum Workers    = 125
+Pool size per worker = 4   (reduced from 5)
+
+Connections = Workers × Pool Size = 125 × 4 = 500 Connections
 ```
 
-Formula
-
-```text
-Connections
-
-=
-
-Pods × Pool Size
-```
-
-Result
-
-```text
-60 × 10
-
-=
-
-600 Connections
-```
-
----
-
-## Step 3 — Celery Pool
-
-Maximum Workers
-
-```text
-100
-```
-
-Pool
-
-```text
-5
-```
-
-Connections
-
-```text
-100 × 5
-
-=
-
-500 Connections
-```
-
----
+> **Why reduce pool size instead of lowering the worker count?** The 125-worker maximum is referenced consistently elsewhere in the handbook (Part 5's KEDA boundaries). Reducing the per-worker pool size instead keeps that number consistent while still respecting the database budget.
 
 ## Step 4 — Validation
 
-Total application connections
-
 ```text
-600
-
-+
-
-500
-
-=
-
-1100
+Total application connections = 600 (API) + 500 (Workers) = 1,100
 ```
 
-Exactly matches our planned budget.
-
----
+This now matches the planned budget **even when both HPA and KEDA are simultaneously at their configured maximum** — which is the scenario that actually matters, since it's the one guaranteed to eventually occur under sustained peak load.
 
 ## Capacity Formula
-
 ```text
-(API Pods × API Pool)
-
-+
-
-(Workers × Worker Pool)
-
-+
-
-Reserved
-
-≤
-
-Database Maximum Connections
+(API Pods × API Pool) + (Workers × Worker Pool) + Reserved ≤ Database Maximum Connections
 ```
 
-This should always be validated before changing HPA or KEDA limits.
+This should always be validated **using each component's configured maximum**, not a lower current or "typical" value — otherwise the check gives a false sense of safety.
 
 ---
 
 # 6.9 Read Replica Planning
 
-Example workload:
-
 ```text
-Reads
-
-=
-
-80%
-
-Writes
-
-=
-
-20%
+Reads  = 80%
+Writes = 20%
 ```
-
-Architecture:
 
 ```text
                 Primary
-
                   │
-
       ┌───────────┼───────────┐
-
  Replica1     Replica2     Replica3
 ```
 
@@ -516,61 +265,113 @@ Guidelines:
 
 ---
 
-# 6.10 AKS Node Planning
+# 6.10 AKS Node Planning *(rewritten)*
 
-Assume:
+The original approach to this section treated node sizing as a single step: divide total pod count by a flat "30 pods per node" figure. That number isn't arbitrary, but it isn't a resource calculation either — and using one blended figure across every workload type hides a large amount of real infrastructure cost. This section replaces that approach with the actual two-step process.
 
-Each node supports:
+## 6.10.1 Where "pods per node" limits actually come from
 
-```text
-30 Pods
-```
+There are **two independent ceilings** on how many pods fit on a node, and the real number is whichever is lower:
 
-Total workload:
+**A. Networking ceiling (fixed by AKS network plugin choice)**
 
-* API Pods = 60
-* Worker Pods = 125
-* RabbitMQ = 3
-* Celery Beat = 1
-* Ingress = 2
-* Monitoring = 10
-* System Pods = 15
+| Network Plugin | Max Pods / Node | Why |
+| --- | --- | --- |
+| Azure CNI (classic) | ~30 (default; configurable up to 250) | Each pod consumes a routable IP directly from the VNet subnet — this is the source of the "30" figure used in the original section |
+| Kubenet | 110 (default) | Pods use a separate, non-VNet-routable IP range |
+| Azure CNI Overlay | Up to 250 | Pods get overlay IPs, not VNet IPs — removes the IP-exhaustion constraint |
 
-Total:
+**B. Resource ceiling (driven by the actual VM size and each pod's CPU/memory *requests*)**
 
 ```text
-216 Pods
+CPU-bound density    = Node Allocatable CPU / Pod CPU Request
+Memory-bound density = Node Allocatable Memory / Pod Memory Request
+
+Actual Pods per Node = min(CPU-bound density, Memory-bound density, Network Ceiling)
 ```
 
-Formula
+"Allocatable" is not the VM's full advertised CPU/memory — AKS reserves a portion of every node for the OS and kubelet system daemons before any pod can be scheduled. As a planning rule of thumb, budgeting for **~10% of node CPU and memory as system-reserved** is a reasonable estimate for mid-sized general-purpose VMs (exact reservation depends on VM size and should be confirmed against current AKS documentation before finalizing a sizing decision).
+
+## 6.10.2 Choosing a VM SKU per node pool
+
+Because each workload in this architecture has a different resource shape, each node pool should be sized independently rather than sharing one VM size:
+
+| Node Pool | Workload shape | Suggested VM family |
+| --- | --- | --- |
+| API | Moderate CPU, light memory (0.5 CPU / 0.5 GiB request) | General purpose (e.g. Dsv5) |
+| Worker | Higher CPU ceiling, moderate memory | General purpose / compute-optimized (e.g. Fsv2) |
+| Messaging (RabbitMQ) | Memory-heavy, needs stable low-latency neighbors | Memory-optimized (e.g. Esv5) |
+| System/Platform | Small, steady, always-on (ingress, monitoring, Beat) | Small general purpose (e.g. Dsv5, smaller size) |
+
+## 6.10.3 Worked example — API node pool
+
+Using the pod requests from Section 6.12 (500m CPU / 512 MiB per Flask pod) on a 4 vCPU / 16 GiB VM, with ~10% reserved for system overhead:
 
 ```text
-Nodes
+Allocatable ≈ 3.6 vCPU, 14.4 GiB
 
-=
+CPU-bound density    = 3.6 / 0.5   ≈ 7 pods
+Memory-bound density = 14.4 / 0.5  ≈ 28 pods
+Network ceiling       = 30 pods
 
-Pods
-
-/
-
-Pods per Node
+Binding constraint = min(7, 28, 30) = 7 pods/node   (CPU-bound)
+```
+```text
+Max API Pods = 60
+Nodes required = ceil(60 / 7) = 9 nodes
 ```
 
-Calculation
+This is markedly different from what a flat "30 pods/node" assumption would imply (60/30 = 2 nodes) — the resource ceiling, not the networking ceiling, is what actually binds here.
+
+## 6.10.4 Worked example — Worker node pool
+
+Using the Celery worker request (500m CPU / 1 GiB per pod) on an 8 vCPU / 16 GiB compute-optimized VM:
 
 ```text
-216 / 30
+Allocatable ≈ 7.2 vCPU, 14.4 GiB
 
-=
+CPU-bound density    = 7.2 / 0.5  ≈ 14 pods
+Memory-bound density = 14.4 / 1   ≈ 14 pods
+Network ceiling       = 30 pods
 
-7.2
+Binding constraint = min(14, 14, 30) = 14 pods/node
+```
+```text
+Max Worker Pods = 125
+Nodes required = ceil(125 / 14) = 9 nodes
 ```
 
-Round up:
+## 6.10.5 Worked example — Messaging node pool
+
+RabbitMQ pods request 2 CPU / 4 GiB each (from 6.12), and there are 3 fixed replicas. On a 4 vCPU / 32 GiB memory-optimized VM:
 
 ```text
-8 Nodes
+Allocatable ≈ 3.6 vCPU, 28.8 GiB
+
+CPU-bound density    = 3.6 / 2   ≈ 1 pod
+Memory-bound density = 28.8 / 4  ≈ 7 pods
+
+Binding constraint = min(1, 7) = 1 pod/node   (CPU-bound)
 ```
+```text
+RabbitMQ Pods = 3
+Nodes required = 3 nodes
+```
+One RabbitMQ replica per node is actually a *desirable* outcome for a quorum cluster, not just a sizing artifact — it keeps each replica isolated from node-level failures affecting its peers.
+
+## 6.10.6 Combined node count — per pool, not blended
+
+| Node Pool | Pods at Max | Density/Node | Nodes Required |
+| --- | --- | --- | --- |
+| API | 60 | 7 | 9 |
+| Worker | 125 | 14 | 9 |
+| Messaging | 3 | 1 | 3 |
+| System/Platform* | 28 | *(insufficient data — see below)* | ~2 (estimate) |
+| **Total** | | | **~23 nodes** |
+
+*System/Platform pool (Ingress=2, Monitoring=10, System=15, Celery Beat=1) has no documented CPU/memory request in this chapter — this is a genuine gap that should be filled with real values before finalizing node count, since the estimate above is a placeholder based on typical lightweight sidecar sizing, not this handbook's own data.
+
+**This is the core finding of this revision**: sizing per-pool from actual resource shape produces **~23 nodes at full scale**, not the 8 nodes the original blended calculation gave. The original number wasn't wrong arithmetic — `216 / 30 = 7.2 → 8` is correct *given* the 30-pods-per-node assumption — but that assumption doesn't hold once you account for the fact that API and Worker pods are CPU-request-bound, not IP-count-bound, at realistic VM sizes.
 
 ---
 
@@ -584,15 +385,13 @@ Recommended limits:
 | Celery Workers | 2   | 125 |
 | RabbitMQ       | 3   | 3   |
 | Celery Beat    | 1   | 1   |
-| Cluster Nodes  | 3   | 10  |
+| Cluster Nodes  | 3   | ~23 *(revised — see 6.10.6; was 10)* |
 
 These values should be revisited after load testing.
 
 ---
 
 # 6.12 Resource Requests and Limits
-
-Example Kubernetes sizing:
 
 | Component     | CPU Request | CPU Limit | Memory Request | Memory Limit |
 | ------------- | ----------- | --------- | -------------- | ------------ |
@@ -614,10 +413,11 @@ Before production, verify:
 * ✔ Average and P95 API latency are measured.
 * ✔ Average Celery task duration is measured.
 * ✔ Database `max_connections` is documented.
-* ✔ Connection pools are sized to stay within the database budget.
+* ✔ Connection pools are sized to stay within the database budget **at each component's configured maximum, not just current load**.
 * ✔ HPA maximum replicas respect database capacity.
 * ✔ KEDA maximum replicas respect database capacity.
-* ✔ AKS node limits can accommodate the maximum pod count.
+* ✔ AKS node limits can accommodate the maximum pod count **using per-pool resource-based density, not a single blended pods-per-node figure**.
+* ✔ VM SKU per node pool is chosen based on that pool's actual CPU/memory request shape.
 * ✔ Load tests validate all assumptions.
 
 ---
@@ -625,8 +425,6 @@ Before production, verify:
 # 6.14 Chapter Summary
 
 Capacity planning is about ensuring every layer scales together without overwhelming another.
-
-The key dependency chain is:
 
 ```text
 Business Demand
@@ -647,16 +445,15 @@ Database Connections
 AKS Nodes (Cluster Autoscaler)
 ```
 
-The database often defines the practical upper limit for the entire system. By calculating connection budgets first and then deriving HPA and KEDA limits from that budget, the platform can scale predictably without exhausting shared resources.
+The database often defines the practical upper limit for the entire system. By calculating connection budgets first — **against configured maximums, not current values** — and then deriving HPA and KEDA limits from that budget, the platform can scale predictably without exhausting shared resources. Node counts should then be derived per node pool, from each workload's actual resource shape, not a single blended pods-per-node assumption.
 
 | Layer          | Primary Metric | Planning Formula               |
 | -------------- | -------------- | ------------------------------ |
 | Flask API      | Requests/sec   | RPS ÷ RPS per Pod              |
 | Celery Workers | Jobs/sec       | Jobs ÷ Worker Throughput       |
 | RabbitMQ       | Messages/sec   | Messages ÷ Consumer Throughput |
-| MySQL          | Connections    | Pods × Pool Size               |
-| AKS            | Pod Density    | Pods ÷ Pods per Node           |
-
+| MySQL          | Connections    | Pods × Pool Size (at max scale)|
+| AKS            | Pod Density    | min(CPU-bound, Memory-bound, Network ceiling) density, per node pool |
 
 ---
 
