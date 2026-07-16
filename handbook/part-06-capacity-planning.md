@@ -212,16 +212,15 @@ Connections = Pods × Pool Size = 60 × 10 = 600 Connections
 
 ## Step 3 — Celery Pool *(corrected)*
 
-Section 6.6 sets the KEDA maximum at **125 workers**, not 100 — the connection budget must be calculated against that actual configured maximum, or a real scale-out event will exceed the database's connection budget.
+The connection budget must be validated against KEDA's actual configured maximum (125 workers, per 6.6), not a lower pre-margin figure.
 
 Remaining budget after API pool: `1,100 - 600 = 500 connections`.
 
 To stay within budget at the full 125-worker maximum, the per-worker pool size must be reduced:
 ```text
-Maximum Workers    = 125
-Pool size per worker = 4   (reduced from 5)
-
-Connections = Workers × Pool Size = 125 × 4 = 500 Connections
+Maximum Workers      = 125
+Pool size per worker = 4   (reduced from 5 to fit budget)
+Connections = 125 × 4 = 500 Connections
 ```
 
 > **Why reduce pool size instead of lowering the worker count?** The 125-worker maximum is referenced consistently elsewhere in the handbook (Part 5's KEDA boundaries). Reducing the per-worker pool size instead keeps that number consistent while still respecting the database budget.
@@ -307,8 +306,10 @@ Because each workload in this architecture has a different resource shape, each 
 
 Using the pod requests from Section 6.12 (500m CPU / 512 MiB per Flask pod) on a 4 vCPU / 16 GiB VM, with ~10% reserved for system overhead:
 
+
 ```text
-Allocatable ≈ 3.6 vCPU, 14.4 GiB
+Pod request: 500m CPU / 512 MiB   (from 6.12)
+VM: 4 vCPU / 16 GiB → Allocatable ≈ 3.6 vCPU, 14.4 GiB
 
 CPU-bound density    = 3.6 / 0.5   ≈ 7 pods
 Memory-bound density = 14.4 / 0.5  ≈ 28 pods
@@ -328,17 +329,16 @@ This is markedly different from what a flat "30 pods/node" assumption would impl
 Using the Celery worker request (500m CPU / 1 GiB per pod) on an 8 vCPU / 16 GiB compute-optimized VM:
 
 ```text
+Pod request: 500m CPU / 1 GiB   (from 6.12)
+VM: 8 vCPU / 16 GiB
 Allocatable ≈ 7.2 vCPU, 14.4 GiB
 
-CPU-bound density    = 7.2 / 0.5  ≈ 14 pods
-Memory-bound density = 14.4 / 1   ≈ 14 pods
-Network ceiling       = 30 pods
-
+CPU-bound density    = 7.2 / 0.5 ≈ 14 pods
+Memory-bound density = 14.4 / 1  ≈ 14 pods
 Binding constraint = min(14, 14, 30) = 14 pods/node
-```
-```text
-Max Worker Pods = 125
-Nodes required = ceil(125 / 14) = 9 nodes
+
+Max Worker Pods = 125 → 
+Nodes = ceil(125 / 14) = 9 nodes
 ```
 
 ## 6.10.5 Worked example — Messaging node pool
@@ -346,32 +346,66 @@ Nodes required = ceil(125 / 14) = 9 nodes
 RabbitMQ pods request 2 CPU / 4 GiB each (from 6.12), and there are 3 fixed replicas. On a 4 vCPU / 32 GiB memory-optimized VM:
 
 ```text
+Pod request: 2 CPU / 4 GiB   (from 6.12)
+VM: 4 vCPU / 32 GiB → 
 Allocatable ≈ 3.6 vCPU, 28.8 GiB
 
-CPU-bound density    = 3.6 / 2   ≈ 1 pod
-Memory-bound density = 28.8 / 4  ≈ 7 pods
+CPU-bound density    = 3.6 / 2  ≈ 1 pod
+Memory-bound density = 28.8 / 4 ≈ 7 pods
+Binding constraint = min(1, 7) = 1 pod/node
 
-Binding constraint = min(1, 7) = 1 pod/node   (CPU-bound)
+RabbitMQ Pods = 3 → Nodes = 3 nodes
 ```
+One replica per node is desirable here, not just an artifact — it isolates each quorum member from node-level failure of its peers.
+
+## 6.10.6 System/Platform node pool — assumed values *(gap filled)*
+
+The original handbook did not document CPU/memory requests for Ingress, Monitoring, or System pods — only Flask API, Celery Worker, RabbitMQ, and Celery Beat were specified in 6.12. The values below are **reasonable assumptions for illustration, not original handbook data**, and should be replaced with real profiled numbers before use in an actual capacity plan.
+
+| Component | Pods | Assumed CPU Request | Assumed Memory Request | Basis for assumption |
+| --- | --- | --- | --- | --- |
+| Ingress (NGINX) | 2 | 200m | 256 MiB | Typical published sizing for NGINX ingress controller at moderate traffic |
+| Monitoring (Prometheus/Grafana/Loki + exporters, blended average) | 10 | 300m | 512 MiB | Prometheus is memory-heavier than this average; treat as a blended estimate across a mixed monitoring stack, not any single component |
+| System (cluster add-ons: CoreDNS, metrics-server, CSI drivers, etc.) | 15 | 100m | 128 MiB | Typical lightweight footprint for small cluster add-on pods |
+| Celery Beat | 1 | 250m | 256 MiB | *(this one is real — documented in 6.12, not assumed)* |
+
+Because this pool is a **heterogeneous mix** of pod shapes rather than one repeated pod type, node count here is best computed from total resource demand rather than per-pod density:
+
 ```text
-RabbitMQ Pods = 3
-Nodes required = 3 nodes
-```
-One RabbitMQ replica per node is actually a *desirable* outcome for a quorum cluster, not just a sizing artifact — it keeps each replica isolated from node-level failures affecting its peers.
+Total CPU requested:
+  Ingress:    2 × 200m  = 400m
+  Monitoring: 10 × 300m = 3,000m
+  System:     15 × 100m = 1,500m
+  Beat:       1 × 250m  = 250m
+  Sum = 5,150m ≈ 5.15 vCPU
 
-## 6.10.6 Combined node count — per pool, not blended
+Total Memory requested:
+  Ingress:    2 × 256 MiB  = 512 MiB
+  Monitoring: 10 × 512 MiB = 5,120 MiB
+  System:     15 × 128 MiB = 1,920 MiB
+  Beat:       1 × 256 MiB  = 256 MiB
+  Sum = 7,808 MiB ≈ 7.6 GiB
+
+VM: 4 vCPU / 16 GiB → Allocatable ≈ 3.6 vCPU, 14.4 GiB per node
+
+Nodes by CPU    = ceil(5.15 / 3.6) = 2 nodes
+Nodes by Memory = ceil(7.6 / 14.4) = 1 node
+Nodes by pod count (28 pods, network ceiling 30/node) = 1 node
+
+Binding constraint = 2 nodes (CPU-bound)
+```
+
+## 6.10.7 Combined node count — per pool
 
 | Node Pool | Pods at Max | Density/Node | Nodes Required |
 | --- | --- | --- | --- |
-| API | 60 | 7 | 9 |
-| Worker | 125 | 14 | 9 |
-| Messaging | 3 | 1 | 3 |
-| System/Platform* | 28 | *(insufficient data — see below)* | ~2 (estimate) |
-| **Total** | | | **~23 nodes** |
+| API | 60 | 7 (CPU-bound) | 9 |
+| Worker | 125 | 14 (CPU/Memory tied) | 9 |
+| Messaging | 3 | 1 (CPU-bound) | 3 |
+| System/Platform | 28 | ~14 (blended — heterogeneous mix, CPU-bound by sum) | 2 |
+| **Total** | **216** | | **~23 nodes** |
 
-*System/Platform pool (Ingress=2, Monitoring=10, System=15, Celery Beat=1) has no documented CPU/memory request in this chapter — this is a genuine gap that should be filled with real values before finalizing node count, since the estimate above is a placeholder based on typical lightweight sidecar sizing, not this handbook's own data.
-
-**This is the core finding of this revision**: sizing per-pool from actual resource shape produces **~23 nodes at full scale**, not the 8 nodes the original blended calculation gave. The original number wasn't wrong arithmetic — `216 / 30 = 7.2 → 8` is correct *given* the 30-pods-per-node assumption — but that assumption doesn't hold once you account for the fact that API and Worker pods are CPU-request-bound, not IP-count-bound, at realistic VM sizes.
+This confirms the earlier estimate: computing per-pool from actual (or reasonably assumed) resource shape gives **~23 nodes at full scale**, not the 8 nodes the original blended "30 pods/node" calculation produced. The API and Worker pools are CPU-request-bound, not IP-count-bound, at realistic VM sizes — that's the main driver of the difference.
 
 ---
 
@@ -385,13 +419,15 @@ Recommended limits:
 | Celery Workers | 2   | 125 |
 | RabbitMQ       | 3   | 3   |
 | Celery Beat    | 1   | 1   |
-| Cluster Nodes  | 3   | ~23 *(revised — see 6.10.6; was 10)* |
+| Cluster Nodes  | 3   | ~23 *(revised — see 6.10.7; original said 10)* |
 
 These values should be revisited after load testing.
 
 ---
 
 # 6.12 Resource Requests and Limits
+
+**Documented in original handbook:**
 
 | Component     | CPU Request | CPU Limit | Memory Request | Memory Limit |
 | ------------- | ----------- | --------- | -------------- | ------------ |
@@ -400,7 +436,15 @@ These values should be revisited after load testing.
 | RabbitMQ      | 2 CPU       | 4 CPU     | 4 GiB          | 8 GiB        |
 | Celery Beat   | 250m        | 500m      | 256 MiB        | 512 MiB      |
 
-These values should be tuned based on profiling rather than guessed.
+**Assumed in this revision (not in original handbook — see 6.10.6):**
+
+| Component  | CPU Request (assumed) | Memory Request (assumed) |
+| ---------- | ---------------------- | -------------------------- |
+| Ingress    | 200m                    | 256 MiB                    |
+| Monitoring | 300m                    | 512 MiB                    |
+| System     | 100m                    | 128 MiB                    |
+
+All values should be tuned based on real profiling rather than guessed — this applies doubly to the assumed rows above.
 
 ---
 
@@ -418,6 +462,7 @@ Before production, verify:
 * ✔ KEDA maximum replicas respect database capacity.
 * ✔ AKS node limits can accommodate the maximum pod count **using per-pool resource-based density, not a single blended pods-per-node figure**.
 * ✔ VM SKU per node pool is chosen based on that pool's actual CPU/memory request shape.
+* ☐ **Ingress, Monitoring, and System pod resource requests are profiled with real numbers** (currently assumed — see 6.10.6/6.12).
 * ✔ Load tests validate all assumptions.
 
 ---
