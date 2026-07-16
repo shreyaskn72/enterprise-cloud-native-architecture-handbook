@@ -503,4 +503,4 @@ Database Capacity (Ultimate Constraint)
 
 ## Next Chapter
 
-The next chapter, **Part 6 – Database Architecture & Optimization**, will focus entirely on designing a highly available, high-performance Azure MySQL deployment. We'll cover schema design, indexing strategies, connection pooling, transaction isolation, read/write splitting, replication lag, backup and recovery, query optimization, and operational practices for running relational databases at scale.
+The next chapter, **Part 6 – Capacity Planning**.
