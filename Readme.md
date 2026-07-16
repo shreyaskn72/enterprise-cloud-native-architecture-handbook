@@ -344,6 +344,8 @@ Consumer Count = Messages/sec / Worker Throughput
 Nodes Required = Pods / Pods per Node
 ```
 
+[part 6 - capacity planning](./handbook/part-06-capacity-planning.md)
+
 ---
 
 # Part 7 – Database Design
