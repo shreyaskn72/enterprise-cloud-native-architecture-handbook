@@ -308,7 +308,11 @@ Scaling Policies:
 - Scale-up and scale-down behaviors
 - Metric aggregation strategies
 - Example configurations with trade-offs
+
 [part 5 - autoscaling](./handbook/part-05-autoscaling.md)
+
+[part 5 - cheat sheet](./cheatsheets/part-05-autoscalingCheatsheet.md)
+
 ---
 
 # Part 6 – Capacity Planning
