@@ -390,6 +390,8 @@ Topics covered:
 - Dead Letter Queue (DLQ) strategies
 - Retry mechanisms with backoff
 
+
+[part 8 Que architecture](./handbook/part-08-que_architecture.md)
 ---
 
 # Part 9 – Failure Scenarios
