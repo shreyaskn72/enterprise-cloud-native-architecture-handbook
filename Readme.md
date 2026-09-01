@@ -368,6 +368,8 @@ Data Management:
 - Sharding design (future roadmap)
 - Caching layers and cache invalidation
 
+[part 7 Database Design](./handbook/part-07-database_design.md)
+
 ---
 
 # Part 8 – Queue Architecture
