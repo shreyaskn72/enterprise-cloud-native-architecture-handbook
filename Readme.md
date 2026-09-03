@@ -439,6 +439,8 @@ SLO Framework:
 - RED methodology (Rate, Errors, Duration)
 - USE methodology (Utilization, Saturation, Errors)
 
+[Part 10 – Monitoring & Observability](./handbook/part-10-monitoring-observability.md)
+
 ---
 
 # Part 11 – Security
