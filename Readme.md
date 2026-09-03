@@ -412,6 +412,7 @@ Comprehensive failure mode analysis with recovery procedures:
 
 Each scenario includes detailed recovery flows and mitigation strategies.
 
+[part 9 Failure scenerios](./handbook/part-09-failure-scenerios.md)
 ---
 
 # Part 10 – Monitoring & Observability
